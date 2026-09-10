@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>寶可夢數學大冒險！</title>
-  <!-- 引入彩帶特效庫 -->
+  <title>寶可夢泡泡救援大冒險</title>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
-      font-family: 'Fredoka', 'Comic Sans MS', '微軟正黑體', sans-serif;
+      font-family: 'Fredoka', '微軟正黑體', sans-serif;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       margin: 0;
-      padding: 15px;
-      background: linear-gradient(135deg, #74ebe5 0%, #ece9e6 100%);
+      padding: 12px;
+      /* 柔和莫蘭迪漸層 */
+      background: linear-gradient(135deg, #d8e2dc 0%, #ffe5ec 100%);
       min-height: 100vh;
       display: flex;
       justify-content: center;
@@ -25,366 +27,413 @@
 
     .game-card {
       background: #ffffff;
-      border: 8px solid #ffcb05; /* 皮卡丘黃 */
-      border-radius: 30px;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+      border-radius: 28px;
+      box-shadow: 0 15px 35px rgba(142, 154, 175, 0.2);
       width: 100%;
-      max-width: 500px;
-      padding: 25px;
+      max-width: 420px;
+      padding: 20px 16px;
       text-align: center;
       position: relative;
       overflow: hidden;
     }
 
-    /* 頂部 PokeBall 裝飾標誌 */
-    .pokeball-header {
-      width: 50px;
-      height: 50px;
-      background: linear-gradient(to bottom, #ff0000 50%, #ffffff 50%);
-      border-radius: 50%;
-      border: 4px solid #333;
-      margin: 0 auto 10px;
-      position: relative;
-    }
-    .pokeball-header::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 16px;
-      height: 16px;
-      background: #fff;
-      border: 3px solid #333;
-      border-radius: 50%;
-    }
-
-    .title {
-      color: #2a75bb;
-      font-size: 28px;
-      font-weight: bold;
-      margin: 0 0 15px 0;
-      text-shadow: 2px 2px #ffcb05;
-    }
-
+    /* 頂部狀態列 */
     .status-bar {
       display: flex;
       justify-content: space-between;
-      font-size: 22px;
-      font-weight: bold;
-      background: #f0f4f8;
-      padding: 12px 20px;
-      border-radius: 20px;
-      margin-bottom: 20px;
-      border: 2px solid #2a75bb;
+      align-items: center;
+      background: #f4f1de;
+      padding: 8px 14px;
+      border-radius: 16px;
+      margin-bottom: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #606c38;
     }
 
-    .timer { color: #e3350d; }
-    .score { color: #2a75bb; }
+    .ball-count {
+      background: #e9edc9;
+      padding: 4px 10px;
+      border-radius: 12px;
+      color: #2b9348;
+    }
 
-    .question-box {
-      background: #fff9d6;
-      border: 4px dashed #ffcb05;
+    /* 泡泡區域 */
+    .bubble-stage {
+      height: 220px;
+      background: #f8f9fa;
       border-radius: 20px;
-      padding: 25px 10px;
-      margin-bottom: 25px;
-      font-size: 48px;
+      border: 2px dashed #d8e2dc;
+      position: relative;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    /* 被包住的寶可夢泡泡 (莫蘭迪色) */
+    .target-bubble {
+      width: 85px;
+      height: 85px;
+      border-radius: 50%;
+      background: rgba(181, 131, 141, 0.25);
+      border: 3px solid #b5838d;
+      box-shadow: inset -5px -5px 12px rgba(181, 131, 141, 0.3), 0 8px 15px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease;
+      animation: floatBubble 3s infinite ease-in-out alternate;
+    }
+
+    .target-bubble:nth-child(2) { animation-delay: 0.5s; background: rgba(109, 104, 117, 0.2); border-color: #6d6875; }
+    .target-bubble:nth-child(3) { animation-delay: 1s; background: rgba(229, 152, 155, 0.25); border-color: #e5989b; }
+
+    @keyframes floatBubble {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-12px); }
+    }
+
+    .pokemon-inside {
+      font-size: 36px;
+      line-height: 1;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    }
+
+    .bubble-num {
+      font-size: 18px;
       font-weight: bold;
-      color: #333;
-      min-height: 110px;
+      color: #3d405b;
+      margin-top: 2px;
+      background: rgba(255,255,255,0.8);
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+
+    /* 題目顯示區 */
+    .question-box {
+      background: #f4f1de;
+      border-radius: 16px;
+      padding: 12px;
+      margin: 15px 0 10px;
+      font-size: 32px;
+      font-weight: 700;
+      color: #3d405b;
+      letter-spacing: 1px;
+    }
+
+    /* 下方砲台區 */
+    .shooter-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .ammo-options {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .ammo-btn {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: #e07a5f;
+      color: white;
+      border: none;
+      font-size: 26px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #d00000, 0 8px 15px rgba(224, 122, 95, 0.3);
+      transition: all 0.1s ease;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    .options-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
+    .ammo-btn:nth-child(1) { background: #81b29a; box-shadow: 0 6px 0 #3d5a80; }
+    .ammo-btn:nth-child(2) { background: #f2cc8f; color: #3d405b; box-shadow: 0 6px 0 #e07a5f; }
+    .ammo-btn:nth-child(3) { background: #3d405b; box-shadow: 0 6px 0 #1d3557; }
 
-    .option-btn {
-      background: #3b4cca;
-      color: white;
-      border: 4px solid #ffcb05;
-      border-radius: 25px;
-      padding: 18px;
-      font-size: 36px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.1s, background-color 0.2s;
-      box-shadow: 0 6px 0 #2a75bb;
-      outline: none;
-    }
-
-    .option-btn:active {
+    .ammo-btn:active {
       transform: translateY(4px);
-      box-shadow: 0 2px 0 #2a75bb;
+      box-shadow: 0 2px 0 #3d405b;
     }
 
-    .feedback {
-      height: 35px;
-      font-size: 22px;
-      font-weight: bold;
+    /* 拯救圖鑑欄 */
+    .pokedex-box {
       margin-top: 15px;
+      background: #f8f9fa;
+      border-radius: 14px;
+      padding: 8px;
+      font-size: 12px;
+      color: #6c757d;
+      font-weight: 600;
     }
-    .feedback.correct { color: #4caf50; }
-    .feedback.wrong { color: #f44336; }
 
-    /* 結束畫面 */
+    .pokedex-list {
+      font-size: 22px;
+      margin-top: 4px;
+      min-height: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* 彈窗 */
     .overlay {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(6px);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       padding: 20px;
-      border-radius: 22px;
+      border-radius: 28px;
       z-index: 10;
     }
 
-    .start-btn, .restart-btn {
-      background: #ff0000;
+    .btn-start {
+      background: #e07a5f;
       color: white;
-      border: 4px solid #333;
-      border-radius: 50px;
-      padding: 15px 40px;
-      font-size: 28px;
-      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      padding: 12px 35px;
+      font-size: 22px;
+      font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 6px 0 #990000;
-      margin-top: 20px;
+      box-shadow: 0 6px 0 #c1121f;
+      margin-top: 15px;
     }
 
-    .start-btn:active, .restart-btn:active {
-      transform: translateY(4px);
-      box-shadow: 0 2px 0 #990000;
-    }
-
-    .pokemon-avatar {
-      font-size: 70px;
-      margin-bottom: 10px;
+    .btn-start:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #c1121f;
     }
   </style>
 </head>
 <body>
 
   <div class="game-card">
-    <div class="pokeball-header"></div>
-    <h1 class="title">⚡ 寶可夢數學大挑戰 ⚡</h1>
-
+    
+    <!-- 頂部狀態 -->
     <div class="status-bar">
-      <div class="timer">⏳ 時間: <span id="time">60</span>s</div>
-      <div class="score">⭐ 分數: <span id="score">0</span></div>
+      <span>🎒 寶可夢拯救隊</span>
+      <span class="ball-count">🔴 已救出: <span id="saved-count">0</span> 隻</span>
     </div>
 
-    <div class="question-box" id="question">準備好了嗎？</div>
-
-    <div class="options-grid" id="options">
-      <button class="option-btn" onclick="checkAnswer(0)">-</button>
-      <button class="option-btn" onclick="checkAnswer(1)">-</button>
-      <button class="option-btn" onclick="checkAnswer(2)">-</button>
+    <!-- 泡泡關卡區 (被困住的寶可夢) -->
+    <div class="bubble-stage" id="bubble-stage">
+      <!-- 由 JS 動態生成 3 個泡泡 -->
     </div>
 
-    <div class="feedback" id="feedback"></div>
+    <!-- 題目區域 -->
+    <div class="question-box" id="question">45 + 38 = ?</div>
 
-    <!-- 遊戲開始/結束 彈窗 -->
+    <div style="font-size: 13px; color: #8d99ae; font-weight: 600;">
+      🎯 點擊下方砲台，發射正確數字泡泡擊破拯救！
+    </div>
+
+    <!-- 下方發射砲台 -->
+    <div class="shooter-area">
+      <div class="ammo-options" id="ammo-options">
+        <button class="ammo-btn" onclick="shootBubble(0)">-</button>
+        <button class="ammo-btn" onclick="shootBubble(1)">-</button>
+        <button class="ammo-btn" onclick="shootBubble(2)">-</button>
+      </div>
+    </div>
+
+    <div id="feedback" style="height: 22px; font-size: 15px; font-weight: bold; margin-top: 8px;"></div>
+
+    <!-- 我的拯救圖鑑 -->
+    <div class="pokedex-box">
+      🏆 我的寶可夢拯救圖鑑：
+      <div class="pokedex-list" id="pokedex-list">尚無拯救紀錄</div>
+    </div>
+
+    <!-- 開始/過關彈窗 -->
     <div class="overlay" id="overlay">
-      <div class="pokemon-avatar" id="end-avatar">⚡</div>
-      <h2 id="end-title" style="font-size: 32px; color: #2a75bb; margin: 10px 0;">準備好挑戰了嗎？</h2>
-      <p id="end-msg" style="font-size: 20px; color: #555; margin: 0;">包含 50以內加減、九九乘法與除法！</p>
-      <button class="start-btn" id="action-btn" onclick="startGame()">開始遊戲！</button>
+      <div style="font-size: 70px;">🫧</div>
+      <h2 style="color: #3d405b; margin: 10px 0; font-size: 24px;">寶可夢泡泡救援戰！</h2>
+      <p style="font-size: 15px; color: #6c757d; line-height: 1.6; text-align: center;">
+        寶可夢被困在數字泡泡裡了！<br>算出數學答案，發射砲台擊破泡泡救出牠們！
+      </p>
+      <button class="btn-start" onclick="closeOverlay()">開始救援！</button>
     </div>
+
   </div>
 
   <script>
-    let score = 0;
-    let timeLeft = 60;
-    let timerInterval = null;
-    let currentCorrectAnswer = 0;
-    let isGameRunning = false;
+    // 寶可夢角色庫
+    const pokemons = ["⚡皮卡丘", "🔥小火龍", "🐢傑尼龜", "🍃妙蛙種子", "🎀伊布", "🎤胖丁", "🦆可達鴨", "🌸波克比"];
 
-    // 音效合成器 (免外部檔)
+    let savedCount = 0;
+    let currentAns = 0;
+    let targetBubblesData = [];
+    let savedPokedex = [];
+
+    // 音效產生器
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
     function playSound(type) {
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
 
-      if (type === 'correct') {
-        // 歡樂音效 (Do-Mi-Sol-Do)
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        let now = audioCtx.currentTime;
-        notes.forEach((freq, index) => {
-          const o = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          o.frequency.value = freq;
-          o.connect(g);
-          g.connect(audioCtx.destination);
-          g.gain.setValueAtTime(0.15, now + index * 0.08);
-          g.gain.exponentialRampToValueAtTime(0.001, now + index * 0.08 + 0.15);
-          o.start(now + index * 0.08);
-          o.stop(now + index * 0.08 + 0.15);
-        });
-      } else if (type === 'wrong') {
-        // 答錯提示音 (低音咚)
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      if (type === 'pop') {
+        // 泡泡破裂聲 (Pop!)
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
         gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+      } else if (type === 'wrong') {
+        // 彈開聲
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
       }
     }
 
-    function startGame() {
-      score = 0;
-      timeLeft = 60;
-      isGameRunning = true;
-      document.getElementById('score').innerText = score;
-      document.getElementById('time').innerText = timeLeft;
-      document.getElementById('overlay').style.display = 'none';
-      document.getElementById('feedback').innerText = '';
-
-      generateQuestion();
-
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        timeLeft--;
-        document.getElementById('time').innerText = timeLeft;
-        if (timeLeft <= 0) {
-          endGame();
-        }
-      }, 1000);
-    }
-
-    function generateQuestion() {
-      // 題型 0: 50以內加減, 1: 99乘法, 2: 兩位數整除法
+    function generateStage() {
+      // 1. 生成大數字題目 (50~100 加減、乘法、除法)
       const type = Math.floor(Math.random() * 3);
-      let num1, num2, answer, qText;
+      let num1, num2, ans, qText;
 
       if (type === 0) {
-        // 50以內加減
+        // 50~100 加減法
         const isAdd = Math.random() > 0.5;
         if (isAdd) {
-          num1 = Math.floor(Math.random() * 30) + 1;
-          num2 = Math.floor(Math.random() * (50 - num1)) + 1;
-          answer = num1 + num2;
+          num1 = Math.floor(Math.random() * 40) + 20;
+          num2 = Math.floor(Math.random() * 40) + 10;
+          ans = num1 + num2;
           qText = `${num1} + ${num2} = ?`;
         } else {
-          num1 = Math.floor(Math.random() * 40) + 10;
-          num2 = Math.floor(Math.random() * num1) + 1;
-          answer = num1 - num2;
+          num1 = Math.floor(Math.random() * 50) + 40;
+          num2 = Math.floor(Math.random() * 30) + 10;
+          ans = num1 - num2;
           qText = `${num1} - ${num2} = ?`;
         }
       } else if (type === 1) {
         // 九九乘法表
-        num1 = Math.floor(Math.random() * 9) + 1;
-        num2 = Math.floor(Math.random() * 9) + 1;
-        answer = num1 * num2;
+        num1 = Math.floor(Math.random() * 8) + 2;
+        num2 = Math.floor(Math.random() * 8) + 2;
+        ans = num1 * num2;
         qText = `${num1} × ${num2} = ?`;
       } else {
-        // 兩位數以內除法 (確保可整除)
-        num2 = Math.floor(Math.random() * 8) + 2; // 除數 2~9
-        const quotient = Math.floor(Math.random() * 9) + 1; // 商 1~9
-        num1 = num2 * quotient; // 被除數
-        answer = quotient;
+        // 兩位數除法
+        num2 = Math.floor(Math.random() * 8) + 2;
+        const q = Math.floor(Math.random() * 9) + 2;
+        num1 = num2 * q;
+        ans = q;
         qText = `${num1} ÷ ${num2} = ?`;
       }
 
-      currentCorrectAnswer = answer;
+      currentAns = ans;
       document.getElementById('question').innerText = qText;
 
-      // 產生選項 (1個正確，2個干擾)
-      let options = [answer];
+      // 2. 產生 3 個目標泡泡 (1個正確答案，2個干擾選項)
+      let options = [ans];
       while (options.length < 3) {
-        let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1);
-        let wrongOpt = answer + offset;
-        if (wrongOpt >= 0 && !options.includes(wrongOpt)) {
-          options.push(wrongOpt);
-        }
+        let offset = (Math.floor(Math.random() * 6) + 1) * (Math.random() > 0.5 ? 1 : -1);
+        let wrong = ans + offset;
+        if (wrong > 0 && !options.includes(wrong)) options.push(wrong);
       }
-
-      // 洗牌選項
       options.sort(() => Math.random() - 0.5);
 
-      const buttons = document.querySelectorAll('.option-btn');
-      buttons.forEach((btn, idx) => {
-        btn.innerText = options[idx];
-        btn.dataset.value = options[idx];
+      // 3. 渲染上方的寶可夢泡泡
+      const stage = document.getElementById('bubble-stage');
+      stage.innerHTML = '';
+      targetBubblesData = [];
+
+      options.forEach((val, idx) => {
+        const randPoke = pokemons[Math.floor(Math.random() * pokemons.length)];
+        const pokeIcon = randPoke.substring(0, 2);
+        
+        targetBubblesData.push({ val: val, poke: randPoke });
+
+        const bEl = document.createElement('div');
+        bEl.className = 'target-bubble';
+        bEl.id = `target-${idx}`;
+        bEl.innerHTML = `
+          <div class="pokemon-inside">${pokeIcon}</div>
+          <div class="bubble-num">${val}</div>
+        `;
+        stage.appendChild(bEl);
+      });
+
+      // 4. 洗牌砲台發射選項
+      let ammoOptions = [...options].sort(() => Math.random() - 0.5);
+      const btns = document.querySelectorAll('.ammo-btn');
+      btns.forEach((btn, i) => {
+        btn.innerText = ammoOptions[i];
+        btn.dataset.val = ammoOptions[i];
       });
     }
 
-    function checkAnswer(index) {
-      if (!isGameRunning) return;
+    function shootBubble(btnIdx) {
+      const btns = document.querySelectorAll('.ammo-btn');
+      const val = parseInt(btns[btnIdx].dataset.val);
+      const feedback = document.getElementById('feedback');
 
-      const buttons = document.querySelectorAll('.option-btn');
-      const selectedValue = parseInt(buttons[index].dataset.value);
-      const feedbackEl = document.getElementById('feedback');
+      if (val === currentAns) {
+        // 擊中正確泡泡！
+        playSound('pop');
+        savedCount++;
+        document.getElementById('saved-count').innerText = savedCount;
 
-      if (selectedValue === currentCorrectAnswer) {
-        // 答對
-        score += 10;
-        document.getElementById('score').innerText = score;
-        feedbackEl.className = 'feedback correct';
-        feedbackEl.innerText = '✨ 太棒了！答對了！';
-        playSound('correct');
+        // 找到正確的泡泡視覺元素
+        const correctTargetObj = targetBubblesData.find(t => t.val === currentAns);
+        const correctPokeName = correctTargetObj.poke;
+        
+        if (!savedPokedex.includes(correctPokeName.substring(0,2))) {
+          savedPokedex.push(correctPokeName.substring(0,2));
+        }
+        updatePokedexUI();
 
-        // 拉彩炮特效
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.7 }
-        });
+        // 歡慶彩帶
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
 
-        generateQuestion();
+        feedback.style.color = '#2b9348';
+        feedback.innerText = `✨ 啪！成功救出 ${correctPokeName}！`;
+
+        setTimeout(() => {
+          feedback.innerText = '';
+          generateStage();
+        }, 1200);
+
       } else {
-        // 答錯
-        feedbackEl.className = 'feedback wrong';
-        feedbackEl.innerText = '❌ 再試一次看看喔！';
+        // 射錯彈開
         playSound('wrong');
+        feedback.style.color = '#e07a5f';
+        feedback.innerText = '🫧 泡泡彈開了，再算一次喔！';
       }
     }
 
-    function endGame() {
-      clearInterval(timerInterval);
-      isGameRunning = false;
-      const overlay = document.getElementById('overlay');
-      const title = document.getElementById('end-title');
-      const msg = document.getElementById('end-msg');
-      const avatar = document.getElementById('end-avatar');
-      const btn = document.getElementById('action-btn');
-
-      title.innerText = '時間到！挑戰結束！';
-      msg.innerText = `你獲得了 ${score} 分！`;
-      btn.innerText = '再玩一次 ↺';
-
-      if (score >= 100) {
-        avatar.innerText = '🏆';
-        msg.innerText += ' 你是神奇寶貝大師！';
-      } else if (score >= 50) {
-        avatar.innerText = '⚡';
-        msg.innerText += ' 很厲害喔，繼續加油！';
+    function updatePokedexUI() {
+      const list = document.getElementById('pokedex-list');
+      if (savedPokedex.length === 0) {
+        list.innerText = "尚無拯救紀錄";
       } else {
-        avatar.innerText = '🔴';
-        msg.innerText += ' 再多練習一下會更好喔！';
+        list.innerHTML = savedPokedex.map(p => `<span>${p}</span>`).join(' ');
       }
+    }
 
-      overlay.style.display = 'flex';
-      
-      // 結算大彩炮
-      confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.5 }
-      });
+    function closeOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+      generateStage();
     }
   </script>
 </body>
