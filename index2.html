@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q版精靈數學大冒險！</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Fredoka', '微軟正黑體', -apple-system, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      /* 莫蘭迪柔和漸層背景 */
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 質感遊戲主卡片 */
+    .game-container {
+      background: #ffffff;
+      border-radius: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 440px;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* 莫蘭迪風格地圖路線 */
+    .map-board {
+      background: #f4f6fb;
+      border-radius: 20px;
+      padding: 12px 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .map-node {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #94a3b8;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .map-node.cleared {
+      background: #10b981;
+      color: white;
+    }
+
+    .map-node.active {
+      background: #ffb703;
+      color: white;
+      transform: scale(1.15);
+      box-shadow: 0 0 12px rgba(255, 183, 3, 0.5);
+    }
+
+    .map-node.gym {
+      width: 44px;
+      height: 44px;
+      background: #f43f5e;
+      color: white;
+      font-size: 20px;
+    }
+
+    .flag {
+      position: absolute;
+      top: -16px;
+      right: -4px;
+      font-size: 14px;
+    }
+
+    /* 狀態列 */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 600;
+      background: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 18px;
+    }
+
+    .stage-title { color: #475569; }
+    .gem-count { 
+      color: #7c3aed; 
+      background: #f3e8ff; 
+      padding: 4px 12px; 
+      border-radius: 20px; 
+    }
+
+    /* 對戰區域 */
+    .monster-box {
+      background: #f8fafc;
+      border-radius: 24px;
+      padding: 18px 12px;
+      margin-bottom: 20px;
+    }
+
+    .monster-avatar {
+      font-size: 72px;
+      line-height: 1.1;
+      margin: 8px 0;
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.08));
+    }
+
+    .hp-bar-bg {
+      background: #e2e8f0;
+      border-radius: 12px;
+      height: 12px;
+      width: 75%;
+      margin: 10px auto 4px;
+      overflow: hidden;
+    }
+
+    .hp-bar-fill {
+      background: linear-gradient(90deg, #38bdf8, #34d399);
+      height: 100%;
+      width: 100%;
+      border-radius: 12px;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 題目框 */
+    .question-box {
+      font-size: 42px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 16px 0;
+      background: #fff;
+      letter-spacing: 2px;
+    }
+
+    /* 現代立體感選項按鈕 */
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .option-btn {
+      background: #ffffff;
+      color: #334155;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 14px;
+      font-size: 32px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #cbd5e1;
+      transition: all 0.1s ease;
+      outline: none;
+    }
+
+    .option-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #cbd5e1;
+    }
+
+    .feedback {
+      height: 28px;
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 14px;
+    }
+
+    /* 寶藏庫 */
+    .trophy-box {
+      margin-top: 20px;
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 10px;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .trophy-list {
+      font-size: 22px;
+      margin-top: 4px;
+      min-height: 30px;
+    }
+
+    /* 彈窗 */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      border-radius: 32px;
+      z-index: 10;
+    }
+
+    .btn-main {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 14px 40px;
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      margin-top: 20px;
+      transition: transform 0.1s;
+    }
+
+    .btn-main:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-container">
+    
+    <!-- 1. 馬力歐闖關地圖 -->
+    <div class="map-board">
+      <div class="map-node active" id="node-1">1</div>
+      <div class="map-node" id="node-2">2</div>
+      <div class="map-node" id="node-3">3</div>
+      <div class="map-node" id="node-4">4</div>
+      <div class="map-node" id="node-5">5</div>
+      <div class="map-node gym" id="node-6">🏰</div>
+    </div>
+
+    <!-- 2. 狀態列 -->
+    <div class="status-bar">
+      <div class="stage-title" id="stage-name">關卡 1：綠森林</div>
+      <div class="gem-count">💎 <span id="gems">0</span></div>
+    </div>
+
+    <!-- 3. 精靈對戰區 -->
+    <div class="monster-box">
+      <div id="monster-name" style="font-weight:600; color:#64748b; font-size:14px;">出現野生的怪獸！</div>
+      <div class="monster-avatar" id="monster-avatar">🐱</div>
+      <div class="hp-bar-bg">
+        <div class="hp-bar-fill" id="hp-fill"></div>
+      </div>
+      <div style="font-size:12px; color:#94a3b8; margin-top:6px; font-weight:600;" id="hp-text">HP: 10 / 10</div>
+    </div>
+
+    <!-- 4. 題目與按鈕 -->
+    <div class="question-box" id="question">15 + 7 = ?</div>
+
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkAnswer(0)">-</button>
+      <button class="option-btn" onclick="checkAnswer(1)">-</button>
+      <button class="option-btn" onclick="checkAnswer(2)">-</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <!-- 5. 我的寶藏庫 -->
+    <div class="trophy-box">
+      🏆 我的精靈寶藏庫
+      <div class="trophy-list" id="trophy-list">尚無寶藏</div>
+    </div>
+
+    <!-- 開始/過關彈窗 -->
+    <div class="overlay" id="overlay">
+      <div style="font-size:80px;" id="pop-icon">🎒</div>
+      <h2 id="pop-title" style="color:#1e293b; margin:12px 0; font-size:26px;">Q版精靈大冒險！</h2>
+      <p id="pop-msg" style="font-size:16px; color:#64748b; text-align:center; line-height:1.5;">
+        連續答對 10 題捕捉怪獸！<br>闖過 5 關挑戰終極道館！
+      </p>
+      <button class="btn-main" id="pop-btn" onclick="closeOverlay()">開始冒險！</button>
+    </div>
+
+  </div>
+
+  <script>
+    const stages = [
+      { name: "關卡 1：綠林小徑", monster: "🐱 喵喵怪", maxHp: 10, trophy: "🐱" },
+      { name: "關卡 2：藍鯨大海", monster: "🐧 企鵝仔", maxHp: 10, trophy: "🐧" },
+      { name: "關卡 3：烈火火山", monster: "🐲 小火龍", maxHp: 10, trophy: "🐲" },
+      { name: "關卡 4：閃電荒野", monster: "🐭 電電鼠", maxHp: 10, trophy: "🐭" },
+      { name: "關卡 5：神秘山洞", monster: "👻 幽靈仔", maxHp: 10, trophy: "👻" },
+      { name: "關卡 6：終極道館", monster: "👑 道館館主 (三連戰!)", maxHp: 15, trophy: "👑道館徽章" }
+    ];
+
+    let currentStage = 0;
+    let currentHp = 10;
+    let gems = 0;
+    let currentAnswer = 0;
+    let trophies = [];
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'correct') {
+        osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+      }
+    }
+
+    function initStage() {
+      const stage = stages[currentStage];
+      currentHp = stage.maxHp;
+      
+      document.getElementById('stage-name').innerText = stage.name;
+      document.getElementById('monster-name').innerText = `正在挑戰：${stage.monster}`;
+      document.getElementById('monster-avatar').innerText = stage.trophy.replace('👑道館徽章', '👹');
+      
+      updateHpBar();
+      updateMapUI();
+      generateQuestion();
+    }
+
+    function updateHpBar() {
+      const stage = stages[currentStage];
+      const pct = (currentHp / stage.maxHp) * 100;
+      document.getElementById('hp-fill').style.width = `${pct}%`;
+      document.getElementById('hp-text').innerText = `HP: ${currentHp} / ${stage.maxHp}`;
+    }
+
+    function updateMapUI() {
+      for (let i = 0; i < 6; i++) {
+        const node = document.getElementById(`node-${i+1}`);
+        node.className = 'map-node' + (i === 5 ? ' gym' : '');
+        
+        const oldFlag = node.querySelector('.flag');
+        if (oldFlag) oldFlag.remove();
+
+        if (i < currentStage) {
+          node.classList.add('cleared');
+          const flag = document.createElement('span');
+          flag.className = 'flag';
+          flag.innerText = '🚩';
+          node.appendChild(flag);
+        } else if (i === currentStage) {
+          node.classList.add('active');
+        }
+      }
+    }
+
+    function generateQuestion() {
+      const type = Math.floor(Math.random() * 3);
+      let num1, num2, ans, qText;
+
+      if (type === 0) {
+        const isAdd = Math.random() > 0.5;
+        if (isAdd) {
+          num1 = Math.floor(Math.random() * 30) + 1;
+          num2 = Math.floor(Math.random() * (50 - num1)) + 1;
+          ans = num1 + num2;
+          qText = `${num1} + ${num2} = ?`;
+        } else {
+          num1 = Math.floor(Math.random() * 40) + 10;
+          num2 = Math.floor(Math.random() * num1) + 1;
+          ans = num1 - num2;
+          qText = `${num1} - ${num2} = ?`;
+        }
+      } else if (type === 1) {
+        num1 = Math.floor(Math.random() * 9) + 1;
+        num2 = Math.floor(Math.random() * 9) + 1;
+        ans = num1 * num2;
+        qText = `${num1} × ${num2} = ?`;
+      } else {
+        num2 = Math.floor(Math.random() * 8) + 2;
+        const quotient = Math.floor(Math.random() * 9) + 1;
+        num1 = num2 * quotient;
+        ans = quotient;
+        qText = `${num1} ÷ ${num2} = ?`;
+      }
+
+      currentAnswer = ans;
+      document.getElementById('question').innerText = qText;
+
+      let opts = [ans];
+      while (opts.length < 3) {
+        let offset = (Math.floor(Math.random() * 4) + 1) * (Math.random() > 0.5 ? 1 : -1);
+        let wrong = ans + offset;
+        if (wrong >= 0 && !opts.includes(wrong)) opts.push(wrong);
+      }
+      opts.sort(() => Math.random() - 0.5);
+
+      const btns = document.querySelectorAll('.option-btn');
+      btns.forEach((btn, i) => {
+        btn.innerText = opts[i];
+        btn.dataset.val = opts[i];
+      });
+    }
+
+    function checkAnswer(idx) {
+      const btns = document.querySelectorAll('.option-btn');
+      const val = parseInt(btns[idx].dataset.val);
+      const feedback = document.getElementById('feedback');
+
+      if (val === currentAnswer) {
+        gems += 1;
+        currentHp -= 1;
+        document.getElementById('gems').innerText = gems;
+        feedback.style.color = '#10b981';
+        feedback.innerText = '✨ 攻擊成功！寶石 +1';
+        playSound('correct');
+        updateHpBar();
+
+        if (currentHp <= 0) {
+          stageClear();
+        } else {
+          generateQuestion();
+        }
+      } else {
+        feedback.style.color = '#f43f5e';
+        feedback.innerText = '❌ 被躲開了，再試一次！';
+        playSound('wrong');
+      }
+    }
+
+    function stageClear() {
+      const stage = stages[currentStage];
+      trophies.push(stage.trophy);
+      document.getElementById('trophy-list').innerText = trophies.join(' ');
+
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+
+      if (currentStage < 5) {
+        showOverlay('🚩 關卡完成！', `你成功捕捉了 ${stage.monster}！<br>成功插上勝利旗子，前往下一關！`, '🚩 下一關');
+        currentStage++;
+      } else {
+        gems += 100;
+        document.getElementById('gems').innerText = gems;
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+        showOverlay('👑 恭喜通關！', `你打敗了終極道館館主！<br>獲得 👑 道館徽章 與 100 大寶石！`, '🔄 重新冒險');
+        currentStage = 0;
+      }
+    }
+
+    function showOverlay(title, msg, btnText) {
+      document.getElementById('pop-title').innerText = title;
+      document.getElementById('pop-msg').innerHTML = msg;
+      document.getElementById('pop-btn').innerText = btnText;
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('feedback').innerText = '';
+      initStage();
+    }
+
+    initStage();
+  </script>
+</body>
+</html>
