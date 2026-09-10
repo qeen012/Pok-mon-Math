@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>武士 RPG 數學大冒險</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Fredoka', '微軟正黑體', sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 10px;
+      background: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #f8fafc;
+    }
+
+    .game-card {
+      background: #1e293b;
+      border: 4px solid #3b82f6;
+      border-radius: 24px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 地圖區域 */
+    .map-screen {
+      width: 100%;
+      height: 270px;
+      background: #22c55e;
+      border-radius: 16px;
+      border: 3px solid #15803d;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+    }
+
+    .grid-cell {
+      border: 1px dashed rgba(255,255,255,0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      position: relative;
+    }
+
+    .path-cell { background: #eab308; }
+    .forest-cell { background: #15803d; }
+    .castle-cell { background: #64748b; }
+
+    .hero {
+      position: absolute;
+      font-size: 28px;
+      transition: all 0.2s ease-in-out;
+      z-index: 5;
+    }
+
+    .flash-screen {
+      animation: flashAnim 0.6s ease-in-out;
+    }
+
+    @keyframes flashAnim {
+      0% { background: #1e293b; }
+      25% { background: #ffffff; }
+      50% { background: #ef4444; }
+      75% { background: #ffffff; }
+      100% { background: #1e293b; }
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 180px;
+      margin: 10px auto 4px;
+    }
+
+    .d-btn {
+      background: #334155;
+      color: white;
+      border: 2px solid #64748b;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #0f172a;
+    }
+
+    .d-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #0f172a;
+    }
+
+    /* 對戰介面 */
+    .battle-screen {
+      display: none;
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 15px;
+      border: 2px solid #ef4444;
+    }
+
+    .monster-avatar {
+      font-size: 65px;
+      margin: 8px 0;
+      animation: bounceMonster 1s infinite alternate;
+    }
+
+    @keyframes bounceMonster {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); }
+    }
+
+    .question-box {
+      font-size: 36px;
+      font-weight: bold;
+      color: #fef08a;
+      margin: 10px 0;
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #1d4ed8;
+    }
+
+    .option-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #1d4ed8;
+    }
+
+    .top-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #334155;
+      padding: 8px 14px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .equip-box {
+      margin-top: 10px;
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .equip-list {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      font-size: 22px;
+      margin-top: 4px;
+      min-height: 28px;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      border-radius: 20px;
+      z-index: 10;
+    }
+
+    .btn-main {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      padding: 10px 25px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-card" id="main-card">
+    
+    <!-- 頂部狀態資訊 -->
+    <div class="top-status">
+      <span>🥷 數學小武士</span>
+      <span>💎 寶石: <span id="gems">0</span></span>
+    </div>
+
+    <!-- 地圖探索介面 -->
+    <div id="explore-mode">
+      <div class="map-screen" id="map-screen"></div>
+
+      <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">
+        移動探索地圖！草地有小怪，右上方是魔王城 🏯
+      </div>
+
+      <!-- 方向控制盤 -->
+      <div class="controls">
+        <div></div>
+        <button class="d-btn" onclick="moveHero(0, -1)">⬆️</button>
+        <div></div>
+        <button class="d-btn" onclick="moveHero(-1, 0)">⬅️</button>
+        <button class="d-btn" onclick="moveHero(0, 1)">⬇️</button>
+        <button class="d-btn" onclick="moveHero(1, 0)">➡️</button>
+      </div>
+
+      <!-- 裝備庫 -->
+      <div class="equip-box">
+        🎒 武士魔王戰利品裝備欄：
+        <div class="equip-list" id="equip-list">尚無魔王裝備</div>
+      </div>
+    </div>
+
+    <!-- 戰鬥模式介面 -->
+    <div class="battle-screen" id="battle-mode">
+      <div id="monster-title" style="color: #ef4444; font-weight: bold;">遭遇野生怪獸！</div>
+      <div class="monster-avatar" id="monster-img">👾</div>
+
+      <div class="question-box" id="question">12 + 8 = ?</div>
+
+      <div class="options-grid">
+        <button class="option-btn" onclick="checkAnswer(0)">-</button>
+        <button class="option-btn" onclick="checkAnswer(1)">-</button>
+        <button class="option-btn" onclick="checkAnswer(2)">-</button>
+      </div>
+      <div id="feedback" style="height:20px; margin-top:8px; font-weight:bold;"></div>
+    </div>
+
+    <!-- 彈窗頁面 -->
+    <div class="overlay" id="overlay">
+      <div style="font-size: 60px;" id="pop-icon">🗺️</div>
+      <h2 id="pop-title" style="color: #f59e0b; margin: 10px 0;">武士 RPG 大冒險！</h2>
+      <p id="pop-msg" style="font-size: 14px; color: #cbd5e1; line-height: 1.6; text-align: center;">
+        打敗小怪獸可累積 💎 寶石！<br>成功踏入魔王城擊敗魔王，才能開啟 🎁 裝備寶箱！
+      </p>
+      <button class="btn-main" onclick="closeOverlay()">開始冒險！</button>
+    </div>
+
+  </div>
+
+  <script>
+    const mapLayout = [
+      [0, 0, 0, 0, 0, 0, 3], // 3 是右上角的魔王城 🏯
+      [1, 1, 1, 0, 2, 2, 0],
+      [0, 0, 1, 0, 0, 0, 0],
+      [0, 2, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 1, 0]
+    ];
+
+    let heroPos = { x: 0, y: 1 };
+    let gems = 0;
+    let currentAns = 0;
+    let isBossBattle = false;
+    let myEquips = [];
+
+    const monsterTypes = ["👾 鬼火怪", "🗿 岩石巨人", "🧌 泥巴怪", "👁️ 惡魔眼"];
+    const bossEquips = ["🗡️ 武士名刀", "🥷 傳說兜帽", "🛡️ 黃金鎧甲", "🥊 龍之護手", "👟 飛天草鞋", "👑 征服者皇冠"];
+
+    // 讀取/儲存進度
+    function loadSave() {
+      const g = localStorage.getItem('rpg_gems');
+      const e = localStorage.getItem('rpg_equips');
+      if (g) gems = parseInt(g);
+      if (e) myEquips = JSON.parse(e);
+      document.getElementById('gems').innerText = gems;
+      updateEquipUI();
+    }
+
+    function saveData() {
+      localStorage.setItem('rpg_gems', gems);
+      localStorage.setItem('rpg_equips', JSON.stringify(myEquips));
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'encounter') {
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+      } else if (type === 'correct') {
+        osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      }
+    }
+
+    function renderMap() {
+      const screen = document.getElementById('map-screen');
+      screen.innerHTML = '';
+
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 7; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+
+          if (mapLayout[r][c] === 1) cell.classList.add('path-cell');
+          if (mapLayout[r][c] === 2) { cell.classList.add('forest-cell'); cell.innerText = '🌲'; }
+          if (mapLayout[r][c] === 3) { cell.classList.add('castle-cell'); cell.innerText = '🏯'; }
+
+          if (r === heroPos.y && c === heroPos.x) {
+            const hero = document.createElement('div');
+            hero.className = 'hero';
+            hero.innerText = '🥷';
+            cell.appendChild(hero);
+          }
+          screen.appendChild(cell);
+        }
+      }
+    }
+
+    function moveHero(dx, dy) {
+      let newX = heroPos.x + dx;
+      let newY = heroPos.y + dy;
+
+      if (newX >= 0 && newX < 7 && newY >= 0 && newY < 5) {
+        heroPos.x = newX;
+        heroPos.y = newY;
+        renderMap();
+
+        const cellType = mapLayout[newY][newX];
+        if (cellType === 3) {
+          // 踏入魔王城
+          triggerBattle(true);
+        } else if ((cellType === 0 || cellType === 2) && Math.random() < 0.4) {
+          // 遇到小怪
+          triggerBattle(false);
+        }
+      }
+    }
+
+    function triggerBattle(isBoss) {
+      isBossBattle = isBoss;
+      playSound('encounter');
+      const card = document.getElementById('main-card');
+      card.classList.add('flash-screen');
+
+      setTimeout(() => {
+        card.classList.remove('flash-screen');
+        document.getElementById('explore-mode').style.display = 'none';
+        document.getElementById('battle-mode').style.display = 'block';
+
+        if (isBoss) {
+          document.getElementById('monster-title').innerText = "⚠️ 警告：終極魔王現身！";
+          document.getElementById('monster-img').innerText = "👹";
+        } else {
+          const m = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+          document.getElementById('monster-title').innerText = `遭遇 ${m}！`;
+          document.getElementById('monster-img').innerText = m.split(' ')[0];
+        }
+
+        generateQuestion();
+      }, 500);
+    }
+
+    function generateQuestion() {
+      const type = Math.floor(Math.random() * 3);
+      let num1, num2, ans, qText;
+
+      if (type === 0) {
+        num1 = Math.floor(Math.random() * 25) + 1;
+        num2 = Math.floor(Math.random() * 25) + 1;
+        ans = num1 + num2;
+        qText = `${num1} + ${num2} = ?`;
+      } else if (type === 1) {
+        num1 = Math.floor(Math.random() * 9) + 1;
+        num2 = Math.floor(Math.random() * 9) + 1;
+        ans = num1 * num2;
+        qText = `${num1} × ${num2} = ?`;
+      } else {
+        num2 = Math.floor(Math.random() * 8) + 2;
+        const q = Math.floor(Math.random() * 9) + 1;
+        num1 = num2 * q;
+        ans = q;
+        qText = `${num1} ÷ ${num2} = ?`;
+      }
+
+      currentAns = ans;
+      document.getElementById('question').innerText = qText;
+
+      let opts = [ans];
+      while (opts.length < 3) {
+        let offset = (Math.floor(Math.random() * 4) + 1) * (Math.random() > 0.5 ? 1 : -1);
+        let wrong = ans + offset;
+        if (wrong >= 0 && !opts.includes(wrong)) opts.push(wrong);
+      }
+      opts.sort(() => Math.random() - 0.5);
+
+      const btns = document.querySelectorAll('.option-btn');
+      btns.forEach((btn, i) => {
+        btn.innerText = opts[i];
+        btn.dataset.val = opts[i];
+      });
+    }
+
+    function checkAnswer(idx) {
+      const btns = document.querySelectorAll('.option-btn');
+      const val = parseInt(btns[idx].dataset.val);
+
+      if (val === currentAns) {
+        playSound('correct');
+
+        if (isBossBattle) {
+          // 打贏魔王，開啟大寶箱！
+          gems += 50;
+          const reward = bossEquips[Math.floor(Math.random() * bossEquips.length)];
+          if (!myEquips.includes(reward)) myEquips.push(reward);
+
+          saveData();
+          confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+
+          showOverlay('👑 成功討伐魔王！', `獲得 50 寶石！<br>🎁 打開魔王寶箱獲得：<b>${reward}</b>！`, '回到地圖');
+          
+          // 回到初始點
+          heroPos = { x: 0, y: 1 };
+        } else {
+          // 打贏普通小怪，只加寶石
+          gems += 5;
+          saveData();
+          confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+          alert("✨ 擊敗小怪獸！獲得 5 顆寶石 💎！");
+        }
+
+        document.getElementById('gems').innerText = gems;
+        updateEquipUI();
+
+        document.getElementById('battle-mode').style.display = 'none';
+        document.getElementById('explore-mode').style.display = 'block';
+        renderMap();
+      } else {
+        document.getElementById('feedback').innerText = '❌ 答錯了，再試一次！';
+        document.getElementById('feedback').style.color = '#ef4444';
+      }
+    }
+
+    function updateEquipUI() {
+      const container = document.getElementById('equip-list');
+      if (myEquips.length === 0) {
+        container.innerText = "尚無魔王裝備";
+      } else {
+        container.innerHTML = myEquips.map(e => `<span>${e.split(' ')[0]}</span>`).join(' ');
+      }
+    }
+
+    function showOverlay(title, msg, btnText) {
+      document.getElementById('pop-title').innerText = title;
+      document.getElementById('pop-msg').innerHTML = msg;
+      document.getElementById('pop-icon').innerText = '🎁';
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+      renderMap();
+    }
+
+    loadSave();
+    renderMap();
+  </script>
+</body>
+</html>
